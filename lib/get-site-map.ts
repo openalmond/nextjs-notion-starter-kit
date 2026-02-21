@@ -10,6 +10,7 @@ import type * as types from './types'
 import * as config from './config'
 import { includeNotionIdInUrls } from './config'
 import { getCanonicalPageId } from './get-canonical-page-id'
+import { normalizeRecordMap } from './normalize-record-map'
 import { notion } from './notion-api'
 
 const uuid = !!includeNotionIdInUrls
@@ -32,12 +33,13 @@ const getAllPages = pMemoize(getAllPagesImpl, {
 
 const getPage = async (pageId: string, opts?: any) => {
   console.log('\nnotion getPage', uuidToId(pageId))
-  return notion.getPage(pageId, {
+  const recordMap = await notion.getPage(pageId, {
     kyOptions: {
       timeout: 30_000
     },
     ...opts
   })
+  return normalizeRecordMap(recordMap)
 }
 
 async function getAllPagesImpl(
@@ -62,8 +64,20 @@ async function getAllPagesImpl(
   // Explicitly crawl collection rows so attached database pages are included.
   const extraPageIds = new Set<string>()
   for (const recordMap of Object.values(pageMap)) {
-    const collectionIds = Object.keys(recordMap?.collection ?? {})
-    const collectionViewIds = Object.keys(recordMap?.collection_view ?? {})
+    const collectionIds = Array.from(
+      new Set(
+        Object.keys(recordMap?.collection ?? {})
+          .map((id) => parsePageId(id, { uuid: true }))
+          .filter(Boolean)
+      )
+    ) as string[]
+    const collectionViewIds = Array.from(
+      new Set(
+        Object.keys(recordMap?.collection_view ?? {})
+          .map((id) => parsePageId(id, { uuid: true }))
+          .filter(Boolean)
+      )
+    ) as string[]
 
     for (const collectionId of collectionIds) {
       for (const collectionViewId of collectionViewIds) {

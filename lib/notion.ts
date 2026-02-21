@@ -12,6 +12,7 @@ import {
   navigationLinks,
   navigationStyle
 } from './config'
+import { normalizeRecordMap } from './normalize-record-map'
 import { getTweetsMap } from './get-tweets'
 import { notion } from './notion-api'
 import { getPreviewImageMap } from './preview-images'
@@ -93,7 +94,7 @@ const hydrateCollectionRowBlocks = async (
 }
 
 export async function getPage(pageId: string): Promise<ExtendedRecordMap> {
-  let recordMap = await notion.getPage(pageId)
+  let recordMap = normalizeRecordMap(await notion.getPage(pageId))
   recordMap = await hydrateCollectionRowBlocks(recordMap)
 
   if (navigationStyle !== 'default') {
@@ -105,7 +106,7 @@ export async function getPage(pageId: string): Promise<ExtendedRecordMap> {
     if (navigationLinkRecordMaps?.length) {
       recordMap = navigationLinkRecordMaps.reduce(
         (map, navigationLinkRecordMap) =>
-          mergeRecordMaps(map, navigationLinkRecordMap),
+          mergeRecordMaps(map, normalizeRecordMap(navigationLinkRecordMap)),
         recordMap
       )
     }
