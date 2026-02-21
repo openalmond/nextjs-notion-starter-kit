@@ -15,9 +15,7 @@ export const tagToSlug = (tag: string) => {
 export const slugToTag = (slug: string) =>
   slug ? decodeURIComponent(slug).replaceAll('-', ' ').trim() : ''
 
-const hiddenTags = new Set<string>([
-  // 'hidden-example'
-])
+const hiddenTags = new Set<string>()
 
 export const isHiddenTag = (tag?: string | null) =>
   hiddenTags.has(normalizeTag(tag))
