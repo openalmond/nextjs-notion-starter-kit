@@ -45,6 +45,10 @@ export default siteConfig({
 
   // URL overrides for specific Notion pages
   pageUrlOverrides: null,
+  pageUrlAdditions: {
+    '/26449883313980758e9df71e17fd52bc': '26449883313980758e9df71e17fd52bc',
+    '/the-almond-branch-blog': '26449883313980758e9df71e17fd52bc'
+  },
 
   // whether to use the default notion navigation style or a custom one with links to
   // important pages. To use `navigationLinks`, set `navigationStyle` to `custom`.

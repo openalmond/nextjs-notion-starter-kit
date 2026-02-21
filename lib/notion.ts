@@ -12,10 +12,10 @@ import {
   navigationLinks,
   navigationStyle
 } from './config'
-import { getPreviewImageMap } from './preview-images'
 import { getTweetsMap } from './get-tweets'
 import { normalizeRecordMap } from './normalize-record-map'
 import { notion } from './notion-api'
+import { getPreviewImageMap } from './preview-images'
 
 const getNavigationLinkPages = pMemoize(
   async (): Promise<ExtendedRecordMap[]> => {

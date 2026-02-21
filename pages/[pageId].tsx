@@ -1,7 +1,7 @@
 import { type GetStaticProps } from 'next'
 
 import { NotionPage } from '@/components/NotionPage'
-import { domain, isDev } from '@/lib/config'
+import { domain, isDev, pageUrlAdditions } from '@/lib/config'
 import { getSiteMap } from '@/lib/get-site-map'
 import { resolveNotionPage } from '@/lib/resolve-notion-page'
 import { type PageProps, type Params } from '@/lib/types'
@@ -36,7 +36,8 @@ export async function getStaticPaths() {
   const hexPageIdRe = /^[a-f0-9]{32}$/
 
   const staticPaths = {
-    paths: Object.keys(siteMap.canonicalPageMap)
+    paths: [
+      ...Object.keys(siteMap.canonicalPageMap)
       .filter((canonicalPageId) => {
         const notionPageId = siteMap.canonicalPageMap[canonicalPageId]
         const recordMap = notionPageId ? siteMap.pageMap?.[notionPageId] : null
@@ -53,6 +54,12 @@ export async function getStaticPaths() {
           pageId
         }
       })),
+      ...Object.keys(pageUrlAdditions).map((pageId) => ({
+        params: {
+          pageId
+        }
+      }))
+    ],
     // paths: [],
     fallback: true
   }
