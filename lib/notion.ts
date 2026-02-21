@@ -3,7 +3,7 @@ import {
   type SearchParams,
   type SearchResults
 } from 'notion-types'
-import { mergeRecordMaps } from 'notion-utils'
+import { mergeRecordMaps, parsePageId } from 'notion-utils'
 import pMap from 'p-map'
 import pMemoize from 'p-memoize'
 
@@ -42,8 +42,59 @@ const getNavigationLinkPages = pMemoize(
   }
 )
 
+const hydrateCollectionRowBlocks = async (
+  recordMap: ExtendedRecordMap
+): Promise<ExtendedRecordMap> => {
+  const blockMap = recordMap.block || {}
+  const queryMap = recordMap.collection_query || {}
+  const missingPageIds = new Set<string>()
+
+  for (const views of Object.values(queryMap)) {
+    for (const viewResult of Object.values(views || {})) {
+      const blockIds: string[] = (viewResult as any)?.collection_group_results
+        ?.blockIds || []
+
+      for (const blockId of blockIds) {
+        const normalizedPageId = parsePageId(blockId, { uuid: true })
+        if (!normalizedPageId) continue
+        if (blockMap[normalizedPageId]) continue
+        missingPageIds.add(normalizedPageId)
+      }
+    }
+  }
+
+  if (!missingPageIds.size) {
+    return recordMap
+  }
+
+  const rowRecordMaps = await pMap(
+    [...missingPageIds],
+    async (rowPageId) => {
+      try {
+        return await notion.getPage(rowPageId, {
+          fetchCollections: false,
+          signFileUrls: false
+        })
+      } catch (err: any) {
+        console.warn('warning failed to hydrate collection row', {
+          rowPageId,
+          message: err?.message
+        })
+        return null
+      }
+    },
+    { concurrency: 6 }
+  )
+
+  return rowRecordMaps.filter(Boolean).reduce(
+    (map, rowRecordMap) => mergeRecordMaps(map, rowRecordMap as ExtendedRecordMap),
+    recordMap
+  )
+}
+
 export async function getPage(pageId: string): Promise<ExtendedRecordMap> {
   let recordMap = await notion.getPage(pageId)
+  recordMap = await hydrateCollectionRowBlocks(recordMap)
 
   if (navigationStyle !== 'default') {
     // ensure that any pages linked to in the custom navigation header have
