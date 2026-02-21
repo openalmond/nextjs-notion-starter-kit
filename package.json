@@ -8,13 +8,13 @@
   "license": "MIT",
   "packageManager": "pnpm@10.11.1",
   "engines": {
-    "node": ">=18"
+    "node": ">=18 <24"
   },
   "type": "module",
   "scripts": {
     "postinstall": "node scripts/patch-notion-utils.mjs",
-    "dev": "node scripts/patch-notion-utils.mjs && next dev --webpack",
-    "build": "node scripts/patch-notion-utils.mjs && next build --webpack",
+    "dev": "node scripts/patch-notion-utils.mjs && node scripts/run-next.mjs dev",
+    "build": "node scripts/patch-notion-utils.mjs && node scripts/run-next.mjs build",
     "start": "next start",
     "deploy": "vercel deploy",
     "deps:upgrade": "[ -z $GITHUB_ACTIONS ] && pnpm up -L notion-client notion-types notion-utils react-notion-x || echo 'Skipping deps:update on CI'",
@@ -24,9 +24,9 @@
     "deps:link:notion-utils": "pnpm link ../react-notion-x/packages/notion-utils",
     "deps:link:notion-client": "pnpm link ../react-notion-x/packages/notion-client",
     "deps:link:react-notion-x": "pnpm link ../react-notion-x/packages/react-notion-x",
-    "analyze": "cross-env ANALYZE=true next build --webpack",
-    "analyze:server": "cross-env BUNDLE_ANALYZE=server next build --webpack",
-    "analyze:browser": "cross-env BUNDLE_ANALYZE=browser next build --webpack",
+    "analyze": "cross-env ANALYZE=true node scripts/run-next.mjs build",
+    "analyze:server": "cross-env BUNDLE_ANALYZE=server node scripts/run-next.mjs build",
+    "analyze:browser": "cross-env BUNDLE_ANALYZE=browser node scripts/run-next.mjs build",
     "test": "run-p test:*",
     "test:lint": "eslint .",
     "test:prettier": "prettier '**/*.{js,jsx,ts,tsx}' --check"
