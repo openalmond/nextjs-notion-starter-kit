@@ -301,12 +301,48 @@ export function NotionPage({
           parsePageId(canonicalId, { uuid: false }) ||
           canonicalId.replaceAll('-', '')
 
+        const safeBlockValue: any = {
+          ...normalizedRecord.value,
+          id: canonicalId
+        }
+
+        if (
+          (safeBlockValue.type === 'collection_view' ||
+            safeBlockValue.type === 'collection_view_page') &&
+          !safeBlockValue.collection_id
+        ) {
+          const viewIds = safeBlockValue.view_ids as string[] | undefined
+
+          if (viewIds?.length) {
+            for (const viewId of viewIds) {
+              const rawViewRecord: any = recordMap.collection_view?.[viewId]
+              let normalizedViewRecord = rawViewRecord
+
+              while (
+                normalizedViewRecord?.value &&
+                normalizedViewRecord?.value?.value &&
+                !normalizedViewRecord?.value?.format
+              ) {
+                normalizedViewRecord = {
+                  ...normalizedViewRecord,
+                  value: normalizedViewRecord.value.value
+                }
+              }
+
+              const pointerCollectionId =
+                normalizedViewRecord?.value?.format?.collection_pointer?.id
+
+              if (pointerCollectionId) {
+                safeBlockValue.collection_id = pointerCollectionId
+                break
+              }
+            }
+          }
+        }
+
         const safeBlockRecord = {
           ...normalizedRecord,
-          value: {
-            ...normalizedRecord.value,
-            id: canonicalId
-          }
+          value: safeBlockValue
         }
 
         acc[rawBlockId] = safeBlockRecord
