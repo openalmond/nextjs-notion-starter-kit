@@ -8,6 +8,7 @@ import { type PageBlock } from 'notion-types'
 import {
   formatDate,
   getBlockTitle,
+  getPageTableOfContents,
   getPageProperty,
   parsePageId
 } from 'notion-utils'
@@ -244,6 +245,128 @@ export function NotionPage({
   const router = useRouter()
   const lite = useSearchParam('lite')
 
+  const safeRecordMap = React.useMemo(() => {
+    if (!recordMap?.block) return recordMap
+
+    const requiredBlockIds = new Set<string>()
+    const resolvedPageUuid = parsePageId(pageId, { uuid: true })
+    const resolvedPageCompact = parsePageId(pageId, { uuid: false })
+
+    if (resolvedPageUuid) requiredBlockIds.add(resolvedPageUuid)
+    if (resolvedPageCompact) requiredBlockIds.add(resolvedPageCompact)
+
+    for (const blockRecord of Object.values(recordMap.block)) {
+      const contentIds = (blockRecord as any)?.value?.content as
+        | string[]
+        | undefined
+      if (!contentIds?.length) continue
+      for (const contentId of contentIds) {
+        requiredBlockIds.add(contentId)
+      }
+    }
+
+    const safeBlockMap = Object.entries(recordMap.block).reduce(
+      (acc, [rawBlockId, blockRecord]) => {
+        let normalizedRecord: any = blockRecord
+
+        // Some record maps can be double-wrapped as { value: { value: block } }.
+        while (
+          normalizedRecord?.value &&
+          normalizedRecord?.value?.value &&
+          !normalizedRecord?.value?.type
+        ) {
+          normalizedRecord = normalizedRecord.value
+        }
+
+        if (!normalizedRecord?.value && normalizedRecord?.type) {
+          normalizedRecord = {
+            id: rawBlockId,
+            role: 'reader',
+            value: normalizedRecord
+          }
+        }
+
+        if (!normalizedRecord?.value) {
+          acc[rawBlockId] = normalizedRecord
+          return acc
+        }
+
+        const parsedValueId = parsePageId(normalizedRecord.value.id, {
+          uuid: true
+        })
+        const parsedRawId = parsePageId(rawBlockId, { uuid: true })
+        const canonicalId = parsedValueId || parsedRawId || rawBlockId
+        const dashedId = parsePageId(canonicalId, { uuid: true }) || canonicalId
+        const compactId =
+          parsePageId(canonicalId, { uuid: false }) ||
+          canonicalId.replaceAll('-', '')
+
+        const safeBlockRecord = {
+          ...normalizedRecord,
+          value: {
+            ...normalizedRecord.value,
+            id: canonicalId
+          }
+        }
+
+        acc[rawBlockId] = safeBlockRecord
+
+        // Add aliases only when they're actually referenced by content/page IDs.
+        if (dashedId !== rawBlockId && requiredBlockIds.has(dashedId)) {
+          acc[dashedId] = safeBlockRecord
+        }
+
+        if (
+          compactId !== rawBlockId &&
+          compactId !== dashedId &&
+          requiredBlockIds.has(compactId)
+        ) {
+          acc[compactId] = safeBlockRecord
+        }
+        return acc
+      },
+      {} as typeof recordMap.block
+    )
+
+    const safeCollectionMap = Object.entries(recordMap.collection || {}).reduce(
+      (acc, [collectionId, collectionRecord]) => {
+        let normalizedRecord: any = collectionRecord
+
+        while (
+          normalizedRecord?.value &&
+          normalizedRecord?.value?.value &&
+          !normalizedRecord?.value?.schema
+        ) {
+          normalizedRecord = {
+            ...normalizedRecord,
+            value: normalizedRecord.value.value
+          }
+        }
+
+        if (!normalizedRecord?.value) {
+          acc[collectionId] = normalizedRecord
+          return acc
+        }
+
+        acc[collectionId] = {
+          ...normalizedRecord,
+          value: {
+            ...normalizedRecord.value,
+            schema: normalizedRecord.value.schema || {}
+          }
+        }
+        return acc
+      },
+      {} as NonNullable<typeof recordMap.collection>
+    )
+
+    return {
+      ...recordMap,
+      block: safeBlockMap,
+      collection: safeCollectionMap
+    }
+  }, [recordMap])
+
   const isBlogIndexPage = React.useMemo(
     () =>
       parsePageId(pageId) === parsePageId(BLOG_INDEX_PAGE_ID) &&
@@ -303,70 +426,68 @@ export function NotionPage({
     if (lite) params.lite = lite
 
     const searchParams = new URLSearchParams(params)
-    return site ? mapPageUrl(site, recordMap!, searchParams) : undefined
-  }, [site, recordMap, lite])
+    return site ? mapPageUrl(site, safeRecordMap!, searchParams) : undefined
+  }, [site, safeRecordMap, lite])
 
-  const keys = Object.keys(recordMap?.block || {})
-  const block = recordMap?.block?.[keys[0]!]?.value
+  const resolvedPageId = parsePageId(pageId, { uuid: true })
+  const fallbackBlockId = Object.keys(safeRecordMap?.block || {})[0]
+  const blockId = resolvedPageId || fallbackBlockId
+  const block = blockId ? safeRecordMap?.block?.[blockId]?.value : undefined
 
   // const isRootPage =
   //   parsePageId(block?.id) === parsePageId(site?.rootNotionPageId)
   const isBlogPost =
     block?.type === 'page' && block?.parent_table === 'collection'
 
-  const showTableOfContents = !!isBlogPost
+  const hasValidTocIds = React.useMemo(() => {
+    if (!safeRecordMap || !block || block.type !== 'page') return false
+
+    try {
+      const toc = getPageTableOfContents(block as PageBlock, safeRecordMap) || []
+      return toc.every((item) => typeof item?.id === 'string' && !!item.id)
+    } catch {
+      return false
+    }
+  }, [block, safeRecordMap])
+
+  const showTableOfContents =
+    !!isBlogPost && !isBlogIndexPage && hasValidTocIds
   const minTableOfContentsItems = 3
 
   const pageAside = React.useMemo(
     () => (
       <PageAside
         block={block!}
-        recordMap={recordMap!}
+        recordMap={safeRecordMap!}
         isBlogPost={isBlogPost}
       />
     ),
-    [block, recordMap, isBlogPost]
+    [block, safeRecordMap, isBlogPost]
   )
 
   if (router.isFallback) {
     return <Loading />
   }
 
-  if (error || !site || !block) {
+  if (error || !site || !safeRecordMap || !block) {
     return <Page404 site={site} pageId={pageId} error={error} />
   }
 
-  const title = getBlockTitle(block, recordMap) || site.name
-
-  console.log('notion page', {
-    isDev: config.isDev,
-    title,
-    pageId,
-    rootNotionPageId: site.rootNotionPageId,
-    recordMap
-  })
-
-  if (!config.isServer) {
-    // add important objects to the window global for easy debugging
-    const g = window as any
-    g.pageId = pageId
-    g.recordMap = recordMap
-    g.block = block
-  }
+  const title = getBlockTitle(block, safeRecordMap) || site.name
 
   const canonicalPageUrl = config.isDev
     ? undefined
-    : getCanonicalPageUrl(site, recordMap)(pageId)
+    : getCanonicalPageUrl(site, safeRecordMap)(pageId)
 
   const socialImage = mapImageUrl(
-    getPageProperty<string>('Social Image', block, recordMap) ||
+    getPageProperty<string>('Social Image', block, safeRecordMap) ||
       (block as PageBlock).format?.page_cover ||
       config.defaultPageCover,
     block
   )
 
   const socialDescription =
-    getPageProperty<string>('Description', block, recordMap) ||
+    getPageProperty<string>('Description', block, safeRecordMap) ||
     config.description
 
   return (
@@ -386,17 +507,18 @@ export function NotionPage({
 
       <div className={styles.notionFrame}>
         <NotionRenderer
+          blockId={resolvedPageId || pageId}
           bodyClassName={cs(
             styles.notion,
             pageId === site.rootNotionPageId && 'index-page'
           )}
           darkMode={resolvedDarkMode}
           components={components}
-          recordMap={recordMap}
+          recordMap={safeRecordMap}
           rootPageId={site.rootNotionPageId}
           rootDomain={site.domain}
           fullPage={!isLiteMode}
-          previewImages={!!recordMap.preview_images}
+          previewImages={!!safeRecordMap.preview_images}
           showCollectionViewDropdown={false}
           showTableOfContents={showTableOfContents}
           minTableOfContentsItems={minTableOfContentsItems}

@@ -33,13 +33,26 @@ export async function getStaticPaths() {
   }
 
   const siteMap = await getSiteMap()
+  const hexPageIdRe = /^[a-f0-9]{32}$/
 
   const staticPaths = {
-    paths: Object.keys(siteMap.canonicalPageMap).map((pageId) => ({
-      params: {
-        pageId
-      }
-    })),
+    paths: Object.keys(siteMap.canonicalPageMap)
+      .filter((canonicalPageId) => {
+        const notionPageId = siteMap.canonicalPageMap[canonicalPageId]
+        const recordMap = notionPageId ? siteMap.pageMap?.[notionPageId] : null
+        const isRawPageId = hexPageIdRe.test(canonicalPageId)
+        const isCollectionIndexPage =
+          !!recordMap && Object.keys(recordMap.collection || {}).length > 0
+
+        // Skip raw database-index routes; these can crash prerender while
+        // slug routes for attached pages still build correctly.
+        return !(isRawPageId && isCollectionIndexPage)
+      })
+      .map((pageId) => ({
+        params: {
+          pageId
+        }
+      })),
     // paths: [],
     fallback: true
   }

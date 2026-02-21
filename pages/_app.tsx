@@ -33,7 +33,11 @@ import {
 
 // Client-only bootstrap
 if (!isServer) {
-  bootstrap()
+  try {
+    bootstrap()
+  } catch (err) {
+    console.error('client bootstrap failed', err)
+  }
 }
 
 export default function App({ Component, pageProps }: AppProps) {
@@ -42,20 +46,36 @@ export default function App({ Component, pageProps }: AppProps) {
   React.useEffect(() => {
     function onRouteChangeComplete() {
       if (fathomId) {
-        Fathom.trackPageview()
+        try {
+          Fathom.trackPageview()
+        } catch (err) {
+          console.error('fathom pageview failed', err)
+        }
       }
 
       if (posthogId) {
-        posthog.capture('$pageview')
+        try {
+          posthog.capture('$pageview')
+        } catch (err) {
+          console.error('posthog pageview failed', err)
+        }
       }
     }
 
     if (fathomId) {
-      Fathom.load(fathomId, fathomConfig)
+      try {
+        Fathom.load(fathomId, fathomConfig)
+      } catch (err) {
+        console.error('fathom init failed', err)
+      }
     }
 
     if (posthogId) {
-      posthog.init(posthogId, posthogConfig)
+      try {
+        posthog.init(posthogId, posthogConfig)
+      } catch (err) {
+        console.error('posthog init failed', err)
+      }
     }
 
     router.events.on('routeChangeComplete', onRouteChangeComplete)

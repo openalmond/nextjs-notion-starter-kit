@@ -69,11 +69,15 @@ export default class MyDocument extends Document {
   } else if (supportsColorSchemeQuery) {
     // source of truth from system
     setClassOnDocumentBody(mql.matches)
-    localStorage.setItem(storageKey, mql.matches)
+    try {
+      localStorage.setItem(storageKey, mql.matches)
+    } catch (err) {}
   } else {
     // source of truth from document.body
     var isDarkMode = document.body.classList.contains(classNameDark)
-    localStorage.setItem(storageKey, JSON.stringify(isDarkMode))
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(isDarkMode))
+    } catch (err) {}
   }
 })();
 `

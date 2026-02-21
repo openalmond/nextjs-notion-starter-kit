@@ -1,4 +1,9 @@
-import { getAllPagesInSpace, getPageProperty, uuidToId } from 'notion-utils'
+import {
+  getAllPagesInSpace,
+  getPageProperty,
+  parsePageId,
+  uuidToId
+} from 'notion-utils'
 import pMemoize from 'p-memoize'
 
 import type * as types from './types'
@@ -39,7 +44,8 @@ async function getAllPagesImpl(
   rootNotionPageId: string,
   rootNotionSpaceId?: string,
   {
-    maxDepth = 1
+    // Depth 2 ensures collection-attached pages are crawled reliably.
+    maxDepth = 2
   }: {
     maxDepth?: number
   } = {}
@@ -52,6 +58,59 @@ async function getAllPagesImpl(
       maxDepth
     }
   )
+
+  // Explicitly crawl collection rows so attached database pages are included.
+  const extraPageIds = new Set<string>()
+  for (const recordMap of Object.values(pageMap)) {
+    const collectionIds = Object.keys(recordMap?.collection ?? {})
+    const collectionViewIds = Object.keys(recordMap?.collection_view ?? {})
+
+    for (const collectionId of collectionIds) {
+      for (const collectionViewId of collectionViewIds) {
+        try {
+          const collectionData = await notion.getCollectionData(
+            collectionId,
+            collectionViewId,
+            undefined,
+            { limit: 1000 }
+          )
+
+          const blockIds: string[] =
+            collectionData?.result?.blockIds ??
+            collectionData?.result?.reducerResults?.collection_group_results
+              ?.blockIds ??
+            []
+
+          for (const blockId of blockIds) {
+            const pageId = parsePageId(blockId, { uuid: true })
+            if (pageId && !pageMap[pageId]) {
+              extraPageIds.add(pageId)
+            }
+          }
+        } catch (err: any) {
+          console.warn('warning failed to crawl collection rows', {
+            collectionId,
+            collectionViewId,
+            message: err?.message
+          })
+        }
+      }
+    }
+  }
+
+  for (const pageId of extraPageIds) {
+    try {
+      pageMap[pageId] = await getPage(pageId, {
+        fetchCollections: false,
+        signFileUrls: false
+      })
+    } catch (err: any) {
+      console.warn('warning failed to load attached page', {
+        pageId,
+        message: err?.message
+      })
+    }
+  }
 
   const canonicalPageMap = Object.keys(pageMap).reduce(
     (map: Record<string, string>, pageId: string) => {
@@ -69,7 +128,13 @@ async function getAllPagesImpl(
 
       const canonicalPageId = getCanonicalPageId(pageId, recordMap, {
         uuid
-      })!
+      })
+      if (!canonicalPageId) {
+        console.warn('warning skipping page with invalid canonical id', {
+          pageId
+        })
+        return map
+      }
 
       if (map[canonicalPageId]) {
         // you can have multiple pages in different collections that have the same id
