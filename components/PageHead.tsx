@@ -205,10 +205,10 @@ export function PageHead({
         <title>{title}</title>
       </Head>
 
-      <Script id='organization-jsonld' type='application/ld+json' strategy='afterInteractive'>
+      <Script id='organization-jsonld' type='application/ld+json' strategy='beforeInteractive'>
         {organizationJsonLd}
       </Script>
-      <Script id='website-jsonld' type='application/ld+json' strategy='afterInteractive'>
+      <Script id='website-jsonld' type='application/ld+json' strategy='beforeInteractive'>
         {websiteJsonLd}
       </Script>
 
@@ -217,7 +217,7 @@ export function PageHead({
         <Script
           id={`blog-post-jsonld-${pageId ?? 'page'}`}
           type='application/ld+json'
-          strategy='afterInteractive'
+          strategy='beforeInteractive'
         >
           {blogPostingJsonLd}
         </Script>

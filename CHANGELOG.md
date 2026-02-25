@@ -30,6 +30,7 @@ All notable changes to this project are documented in this file.
 - Redesigned `/api/social-image` output to a more modern OG/Twitter card layout with title/summary emphasis.
 - Enhanced sitemap output with deduped URLs, XML escaping, and per-page `lastmod` / `priority`.
 - Refreshed web app and iOS icon assets with dark backgrounds and increased safe padding for Android maskable icons.
+- Switched JSON-LD scripts to server-visible `beforeInteractive` output so structured data is present in initial HTML.
 
 ## [2026-02-25]
 
