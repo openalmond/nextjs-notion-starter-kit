@@ -8,6 +8,8 @@ import pMap from 'p-map'
 import pMemoize from 'p-memoize'
 
 import {
+  collectionRowHydrationLimit,
+  collectionRowHydrationLimits,
   isPreviewImageSupportEnabled,
   navigationLinks,
   navigationStyle
@@ -44,7 +46,8 @@ const getNavigationLinkPages = pMemoize(
 )
 
 const hydrateCollectionRowBlocks = async (
-  recordMap: ExtendedRecordMap
+  recordMap: ExtendedRecordMap,
+  pageId: string
 ): Promise<ExtendedRecordMap> => {
   const blockMap = recordMap.block || {}
   const queryMap = recordMap.collection_query || {}
@@ -68,8 +71,36 @@ const hydrateCollectionRowBlocks = async (
     return recordMap
   }
 
+  const orderedMissingPageIds = [...missingPageIds].sort()
+  const normalizedPageId = parsePageId(pageId, { uuid: false })
+  const pageSpecificHydrationLimit = normalizedPageId
+    ? collectionRowHydrationLimits[normalizedPageId]
+    : undefined
+  const effectiveHydrationLimit =
+    pageSpecificHydrationLimit ?? collectionRowHydrationLimit
+
+  const shouldCapHydration =
+    typeof effectiveHydrationLimit === 'number' && effectiveHydrationLimit > 0
+
+  const hydrationCap = shouldCapHydration ? effectiveHydrationLimit! : undefined
+
+  const rowPageIds = shouldCapHydration
+    ? orderedMissingPageIds.slice(0, hydrationCap)
+    : orderedMissingPageIds
+
+  if (shouldCapHydration && rowPageIds.length < orderedMissingPageIds.length) {
+    console.warn('collection row hydration capped', {
+      pageId: normalizedPageId || pageId,
+      cap: hydrationCap,
+      hydratedRows: rowPageIds.length,
+      skippedRows: orderedMissingPageIds.length - rowPageIds.length,
+      source:
+        typeof pageSpecificHydrationLimit === 'number' ? 'page-specific' : 'global'
+    })
+  }
+
   const rowRecordMaps = await pMap(
-    [...missingPageIds],
+    rowPageIds,
     async (rowPageId) => {
       try {
         return await notion.getPage(rowPageId, {
@@ -95,7 +126,7 @@ const hydrateCollectionRowBlocks = async (
 
 export async function getPage(pageId: string): Promise<ExtendedRecordMap> {
   let recordMap = normalizeRecordMap(await notion.getPage(pageId))
-  recordMap = await hydrateCollectionRowBlocks(recordMap)
+  recordMap = await hydrateCollectionRowBlocks(recordMap, pageId)
 
   if (navigationStyle !== 'default') {
     // ensure that any pages linked to in the custom navigation header have

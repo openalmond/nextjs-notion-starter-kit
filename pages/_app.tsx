@@ -14,7 +14,6 @@ import 'styles/notion.css'
 import 'styles/prism-theme.css'
 
 import type { AppProps } from 'next/app'
-import { IconContext } from '@react-icons/all-files'
 import { Analytics } from '@vercel/analytics/next'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import * as Fathom from 'fathom-client'
@@ -86,10 +85,10 @@ export default function App({ Component, pageProps }: AppProps) {
   }, [router.events])
 
   return (
-    <IconContext.Provider value={{ style: { verticalAlign: 'middle' } }}>
+    <>
       <Component {...pageProps} />
       <Analytics />
       <SpeedInsights />
-    </IconContext.Provider>
+    </>
   )
 }

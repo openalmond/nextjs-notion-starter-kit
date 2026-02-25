@@ -133,7 +133,7 @@ async function getAllPagesImpl(
         throw new Error(`Error loading page "${pageId}"`)
       }
 
-      const block = recordMap.block[pageId]?.value
+      const block = (recordMap.block[pageId] as any)?.value as any
       if (
         !(getPageProperty<boolean | null>('Public', block!, recordMap) ?? true)
       ) {

@@ -188,10 +188,15 @@ If you want to test your redis builds with GitHub Actions, then you'll need to e
 
 ## Contributing
 
-See the [contribution guide](contributing.md) and join our amazing list of [contributors](https://github.com/transitive-bullshit/nextjs-notion-starter-kit/graphs/contributors)!
+See the [contribution guide](contributing.md).
 
 ## License
 
-MIT © [Travis Fischer](https://transitivebullsh.it)
+MIT. See [LICENSE.md](./LICENSE.md).
 
-Support my open source work by <a href="https://twitter.com/transitive_bs">following me on twitter <img src="https://storage.googleapis.com/saasify-assets/twitter-logo.svg" alt="twitter" height="24px" align="center"></a>
+## Project Docs
+
+- [CHANGELOG.md](./CHANGELOG.md)
+- [LICENSE.md](./LICENSE.md)
+- [PRIVACY.md](./PRIVACY.md)
+- [SECURITY.md](./SECURITY.md)

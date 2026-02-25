@@ -94,6 +94,25 @@ export const isPreviewImageSupportEnabled: boolean = getSiteConfig(
   false
 )
 
+// Optional cap for collection row hydration fetches.
+// `null` means no cap (hydrate all rows), which is the safest default.
+export const collectionRowHydrationLimit: number | null = getSiteConfig(
+  'collectionRowHydrationLimit',
+  null
+)
+
+export const collectionRowHydrationLimits: Record<string, number> =
+  cleanCollectionRowHydrationLimits(
+    getSiteConfig('collectionRowHydrationLimits', null) || {}
+  )
+
+// Optional migration flag for react-notion-x image rendering.
+// Keep disabled until next/image behavior is validated against your Notion content.
+export const isNextImageEnabled: boolean = getSiteConfig(
+  'isNextImageEnabled',
+  false
+)
+
 // Optional whether or not to include the Notion ID in page URLs or just use slugs
 export const includeNotionIdInUrls: boolean = getSiteConfig(
   'includeNotionIdInUrls',
@@ -222,4 +241,36 @@ function invertPageUrlOverrides(
       [pageId]: uri
     }
   }, {})
+}
+
+function cleanCollectionRowHydrationLimits(
+  pageLimitMap: Record<string, number | null>
+): Record<string, number> {
+  return Object.entries(pageLimitMap).reduce(
+    (acc, [rawPageId, rawLimit]) => {
+      const normalizedPageId = parsePageId(rawPageId, { uuid: false })
+
+      if (!normalizedPageId) {
+        throw new Error(
+          `Invalid collectionRowHydrationLimits page id "${rawPageId}"`
+        )
+      }
+
+      if (
+        typeof rawLimit !== 'number' ||
+        !Number.isFinite(rawLimit) ||
+        rawLimit <= 0
+      ) {
+        throw new Error(
+          `Invalid collectionRowHydrationLimits value "${rawLimit}" for page "${rawPageId}"; expected a positive number`
+        )
+      }
+
+      return {
+        ...acc,
+        [normalizedPageId]: Math.floor(rawLimit)
+      }
+    },
+    {} as Record<string, number>
+  )
 }

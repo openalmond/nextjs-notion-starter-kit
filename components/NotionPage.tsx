@@ -1,7 +1,8 @@
 /* eslint-disable simple-import-sort/imports */
 import cs from 'classnames'
 import dynamic from 'next/dynamic'
-import Image from 'next/legacy/image'
+import NextImage from 'next/image'
+import NextLegacyImage from 'next/legacy/image'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { type PageBlock } from 'notion-types'
@@ -193,7 +194,7 @@ const propertyTextValue = (
 }
 
 const propertySelectValue = (
-  { schema }: any,
+  { schema, pageHeader, key: propertyKey }: any,
   defaultFn: () => React.ReactNode
 ) => {
   const name = schema?.name?.toLowerCase()
@@ -213,7 +214,9 @@ const propertySelectValue = (
 
   if (name === 'author') {
     return textContent ? (
-      <span className='notion-author-inline'>By {textContent}</span>
+      <span key={propertyKey} className='notion-author-inline'>
+        By {textContent}
+      </span>
     ) : (
       node
     )
@@ -223,11 +226,18 @@ const propertySelectValue = (
 
   if (!textContent || isHiddenTag(textContent)) return node
 
+  // Avoid nested anchors in collection cards (card is already a link).
+  if (!pageHeader) return node
+
   const slug = tagToSlug(textContent)
   if (!slug) return node
 
   return (
-    <Link href={`/tag/${slug}#tag-content`} className='notion-tag-link'>
+    <Link
+      key={propertyKey}
+      href={`/tag/${slug}#tag-content`}
+      className='notion-tag-link'
+    >
       {node}
     </Link>
   )
@@ -427,21 +437,27 @@ export function NotionPage({
   }, [isBlogIndexPage])
 
   const components = React.useMemo<Partial<NotionComponents>>(
-    () => ({
-      nextLegacyImage: Image,
-      nextLink: NextLink,
-      Code,
-      Collection: collectionComponent,
-      Equation,
-      Pdf,
-      Modal,
-      Tweet,
-      Header: NotionPageHeader,
-      propertyLastEditedTimeValue,
-      propertyTextValue,
-      propertyDateValue,
-      propertySelectValue
-    }),
+    () => {
+      const notionImageComponent = config.isNextImageEnabled
+        ? { nextImage: NextImage }
+        : { nextLegacyImage: NextLegacyImage }
+
+      return {
+        ...notionImageComponent,
+        nextLink: NextLink,
+        Code,
+        Collection: collectionComponent,
+        Equation,
+        Pdf,
+        Modal,
+        Tweet,
+        Header: NotionPageHeader,
+        propertyLastEditedTimeValue,
+        propertyTextValue,
+        propertyDateValue,
+        propertySelectValue
+      }
+    },
     [collectionComponent]
   )
 
@@ -468,7 +484,9 @@ export function NotionPage({
   const resolvedPageId = parsePageId(pageId, { uuid: true })
   const fallbackBlockId = Object.keys(safeRecordMap?.block || {})[0]
   const blockId = resolvedPageId || fallbackBlockId
-  const block = blockId ? safeRecordMap?.block?.[blockId]?.value : undefined
+  const block = blockId
+    ? ((safeRecordMap?.block?.[blockId] as any)?.value as any)
+    : undefined
 
   // const isRootPage =
   //   parsePageId(block?.id) === parsePageId(site?.rootNotionPageId)
@@ -525,6 +543,36 @@ export function NotionPage({
   const socialDescription =
     getPageProperty<string>('Description', block, safeRecordMap) ||
     config.description
+  const rawTags = getPageProperty<string | string[]>('Tags', block, safeRecordMap)
+  const tagList = Array.isArray(rawTags)
+    ? rawTags
+    : typeof rawTags === 'string'
+    ? rawTags.split(',')
+    : []
+  const seoKeywords = [
+    ...new Set(
+      tagList
+        .map((tag) => tag?.trim())
+        .filter((tag): tag is string => !!tag && !isHiddenTag(tag))
+    )
+  ]
+
+  const publishedProp =
+    getPageProperty<number | string>('Published', block, safeRecordMap) ||
+    getPageProperty<number | string>('Date', block, safeRecordMap)
+  const publishedDate = publishedProp ? new Date(publishedProp) : null
+  const publishedTime =
+    publishedDate && !Number.isNaN(publishedDate.getTime())
+      ? publishedDate.toISOString()
+      : undefined
+
+  const editedDate = block?.last_edited_time
+    ? new Date(block.last_edited_time)
+    : null
+  const modifiedTime =
+    editedDate && !Number.isNaN(editedDate.getTime())
+      ? editedDate.toISOString()
+      : undefined
 
   return (
     <>
@@ -536,6 +584,9 @@ export function NotionPage({
         image={socialImage}
         url={canonicalPageUrl}
         isBlogPost={isBlogPost}
+        keywords={seoKeywords}
+        publishedTime={publishedTime}
+        modifiedTime={modifiedTime}
       />
 
       {isLiteMode && <BodyClassName className='notion-lite' />}

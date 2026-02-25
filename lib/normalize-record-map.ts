@@ -33,9 +33,6 @@ function normalizeBlockMap(blockMap: ExtendedRecordMap['block']) {
       const parsedRawId = parsePageId(rawBlockId, { uuid: true })
       const canonicalId = parsedValueId || parsedRawId || rawBlockId
       const dashedId = parsePageId(canonicalId, { uuid: true }) || canonicalId
-      const compactId =
-        parsePageId(canonicalId, { uuid: false }) ||
-        canonicalId.replaceAll('-', '')
 
       const safeBlockRecord = {
         ...normalizedRecord,
@@ -47,7 +44,6 @@ function normalizeBlockMap(blockMap: ExtendedRecordMap['block']) {
 
       acc[rawBlockId] = safeBlockRecord
       acc[dashedId] = safeBlockRecord
-      acc[compactId] = safeBlockRecord
 
       return acc
     },
@@ -83,9 +79,6 @@ function normalizeCollectionMap(collectionMap: ExtendedRecordMap['collection']) 
         parsePageId(collectionId, { uuid: true }) ||
         collectionId
       const dashedId = parsePageId(canonicalId, { uuid: true }) || canonicalId
-      const compactId =
-        parsePageId(canonicalId, { uuid: false }) ||
-        canonicalId.replaceAll('-', '')
 
       const safeCollectionRecord = {
         ...normalizedRecord,
@@ -98,7 +91,6 @@ function normalizeCollectionMap(collectionMap: ExtendedRecordMap['collection']) 
 
       acc[collectionId] = safeCollectionRecord
       acc[dashedId] = safeCollectionRecord
-      acc[compactId] = safeCollectionRecord
 
       return acc
     },

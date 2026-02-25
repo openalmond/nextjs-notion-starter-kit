@@ -26,6 +26,9 @@ export interface SiteConfig {
   defaultPageCoverPosition?: number | null
 
   isPreviewImageSupportEnabled?: boolean
+  collectionRowHydrationLimit?: number | null
+  collectionRowHydrationLimits?: Record<string, number | null>
+  isNextImageEnabled?: boolean
   isTweetEmbedSupportEnabled?: boolean
   isRedisEnabled?: boolean
   isSearchEnabled?: boolean

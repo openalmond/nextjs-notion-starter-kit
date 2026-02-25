@@ -38,7 +38,18 @@ export default siteConfig({
   defaultPageCoverPosition: 0.5,
 
   // preview image settings
-  isPreviewImageSupportEnabled: true,
+  isPreviewImageSupportEnabled: false,
+  // global fallback cap for collection row hydration.
+  collectionRowHydrationLimit: 24,
+  // canary: lower cap only for the heaviest pages to reduce page-data payloads.
+  collectionRowHydrationLimits: {
+    // home page
+    '1b3498833139808ebe9afc6028b2a5e6': 20,
+    // blog index page
+    '26449883313980758e9df71e17fd52bc': 20
+  },
+  // staged migration complete: using modern next/image with react-notion-x
+  isNextImageEnabled: true,
 
   // redis cache for preview images
   isRedisEnabled: false,

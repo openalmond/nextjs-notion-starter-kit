@@ -16,26 +16,38 @@ import { mapImageUrl } from './map-image-url'
 export async function getPreviewImageMap(
   recordMap: ExtendedRecordMap
 ): Promise<PreviewImageMap> {
-  const urls: string[] = getPageImageUrls(recordMap, {
+  const rawUrls = getPageImageUrls(recordMap, {
     mapImageUrl
   })
     .concat([defaultPageIcon, defaultPageCover].filter(Boolean))
     .filter(Boolean)
 
-  const previewImagesMap = Object.fromEntries(
-    await pMap(
-      urls,
-      async (url) => {
-        const cacheKey = normalizeUrl(url)
-        return [cacheKey, await getPreviewImage(url, { cacheKey })]
-      },
-      {
-        concurrency: 8
-      }
-    )
+  const previewUrlMap = rawUrls.reduce((acc, url) => {
+    if (!isSupportedPreviewUrl(url)) return acc
+
+    const cacheKey = normalizeUrl(url)
+    if (!cacheKey || acc.has(cacheKey)) return acc
+
+    acc.set(cacheKey, url)
+    return acc
+  }, new Map<string, string>())
+
+  const previewEntries = await pMap(
+    [...previewUrlMap.entries()],
+    async ([cacheKey, url]) => {
+      const previewImage = await getPreviewImage(url, { cacheKey })
+      return previewImage ? [cacheKey, previewImage] : null
+    },
+    {
+      concurrency: 8
+    }
   )
 
-  return previewImagesMap
+  return Object.fromEntries(
+    previewEntries.filter(
+      (entry): entry is [string, PreviewImage] => entry !== null
+    )
+  )
 }
 
 async function createPreviewImage(
@@ -55,7 +67,6 @@ async function createPreviewImage(
 
     const body = await ky(url).arrayBuffer()
     const result = await lqip(body)
-    console.log('lqip', { ...result.metadata, url, cacheKey })
 
     const previewImage = {
       originalWidth: result.metadata.originalWidth,
@@ -78,3 +89,18 @@ async function createPreviewImage(
 }
 
 export const getPreviewImage = pMemoize(createPreviewImage)
+
+function isSupportedPreviewUrl(url: string): boolean {
+  if (!url) return false
+  if (!/^https?:\/\//i.test(url)) return false
+
+  // Notion custom emoji "image" URLs frequently 404 and don't benefit from LQIP.
+  if (
+    url.includes('notion%3A%2F%2Fcustom_emoji%2F') ||
+    url.includes('notion://custom_emoji/')
+  ) {
+    return false
+  }
+
+  return true
+}

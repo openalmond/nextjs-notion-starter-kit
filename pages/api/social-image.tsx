@@ -18,6 +18,13 @@ import { type NotionPageInfo, type PageError } from '@/lib/types'
 
 export const runtime = 'edge'
 
+const truncate = (value: string | undefined, maxLength: number): string => {
+  if (!value) return ''
+  const trimmed = value.trim()
+  if (trimmed.length <= maxLength) return trimmed
+  return `${trimmed.slice(0, maxLength - 1).trimEnd()}…`
+}
+
 export default async function OGImage(
   req: NextApiRequest,
   res: NextApiResponse
@@ -37,7 +44,9 @@ export default async function OGImage(
     })
   }
   const pageInfo = pageInfoOrError.data
-  console.log(pageInfo)
+  const cardTitle = truncate(pageInfo.title, 96)
+  const cardDescription = truncate(pageInfo.description, 190)
+  const cardDetail = truncate(pageInfo.detail, 72)
 
   return new ImageResponse(
     (
@@ -47,11 +56,12 @@ export default async function OGImage(
           width: '100%',
           height: '100%',
           display: 'flex',
-          flexDirection: 'column',
-          backgroundColor: '#1F2027',
+          backgroundColor: '#0f172a',
+          backgroundImage:
+            'linear-gradient(140deg, #0b1220 0%, #12233b 55%, #0d1a2e 100%)',
           alignItems: 'center',
           justifyContent: 'center',
-          color: 'black'
+          color: '#e5e7eb'
         }}
       >
         {pageInfo.image && (
@@ -61,20 +71,8 @@ export default async function OGImage(
               position: 'absolute',
               width: '100%',
               height: '100%',
-              objectFit: 'cover'
-              // TODO: satori doesn't support background-size: cover and seems to
-              // have inconsistent support for filter + transform to get rid of the
-              // blurred edges. For now, we'll go without a blur filter on the
-              // background, but Satori is still very new, so hopefully we can re-add
-              // the blur soon.
-
-              // backgroundImage: pageInfo.image
-              //   ? `url(${pageInfo.image})`
-              //   : undefined,
-              // backgroundSize: '100% 100%'
-              // TODO: pageInfo.imageObjectPosition
-              // filter: 'blur(8px)'
-              // transform: 'scale(1.05)'
+              objectFit: 'cover',
+              opacity: 0.18
             }}
           />
         )}
@@ -82,74 +80,163 @@ export default async function OGImage(
         <div
           style={{
             position: 'relative',
-            width: 900,
-            height: 465,
+            width: 1080,
+            height: 540,
             display: 'flex',
             flexDirection: 'column',
-            border: '16px solid rgba(0,0,0,0.3)',
-            borderRadius: 8,
+            border: '1px solid rgba(255,255,255,0.22)',
+            borderRadius: 28,
             zIndex: '1'
           }}
         >
           <div
             style={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              background:
+                'linear-gradient(180deg, rgba(2,6,23,0.78) 0%, rgba(2,6,23,0.92) 100%)',
+              borderRadius: 28
+            }}
+          />
+
+          <div
+            style={{
+              position: 'relative',
               width: '100%',
               height: '100%',
               display: 'flex',
               flexDirection: 'column',
-              justifyContent: 'space-around',
-              backgroundColor: '#fff',
-              padding: 24,
-              alignItems: 'center',
-              textAlign: 'center'
+              justifyContent: 'space-between',
+              padding: '42px 52px',
+              fontFamily: 'Inter'
             }}
           >
-            {pageInfo.detail && (
-              <div style={{ fontSize: 32, opacity: 0 }}>{pageInfo.detail}</div>
-            )}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  fontSize: 22,
+                  letterSpacing: '0.04em',
+                  textTransform: 'uppercase',
+                  color: '#c7d2fe'
+                }}
+              >
+                Open Almond Studios
+              </div>
+
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  fontSize: 18,
+                  color: '#cbd5e1'
+                }}
+              >
+                {libConfig.domain}
+              </div>
+            </div>
 
             <div
               style={{
-                fontSize: 70,
-                fontWeight: 700,
-                fontFamily: 'Inter'
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 20
               }}
             >
-              {pageInfo.title}
+              <div
+                style={{
+                  display: 'flex',
+                  fontSize: 64,
+                  fontWeight: 700,
+                  lineHeight: 1.05,
+                  color: '#f8fafc',
+                  maxHeight: 220,
+                  overflow: 'hidden'
+                }}
+              >
+                {cardTitle}
+              </div>
+
+              {cardDescription && (
+                <div
+                  style={{
+                    display: 'flex',
+                    fontSize: 30,
+                    lineHeight: 1.3,
+                    color: '#cbd5e1',
+                    maxHeight: 128,
+                    overflow: 'hidden'
+                  }}
+                >
+                  {cardDescription}
+                </div>
+              )}
             </div>
 
-            {pageInfo.detail && (
-              <div style={{ fontSize: 32, opacity: 0.6 }}>
-                {pageInfo.detail}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 14
+                }}
+              >
+                {pageInfo.authorImage && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      width: 52,
+                      height: 52,
+                      borderRadius: '50%',
+                      overflow: 'hidden',
+                      border: '2px solid rgba(255,255,255,0.5)'
+                    }}
+                  >
+                    <img
+                      src={pageInfo.authorImage}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                  </div>
+                )}
+
+                <div
+                  style={{
+                    display: 'flex',
+                    fontSize: 24,
+                    color: '#e2e8f0'
+                  }}
+                >
+                  {cardDetail || pageInfo.author || libConfig.author}
+                </div>
               </div>
-            )}
+
+              <div
+                style={{
+                  display: 'flex',
+                  fontSize: 20,
+                  color: '#93c5fd',
+                  letterSpacing: '0.02em'
+                }}
+              >
+                openalmond.com
+              </div>
+            </div>
           </div>
         </div>
-
-        {pageInfo.authorImage && (
-          <div
-            style={{
-              position: 'absolute',
-              top: 47,
-              left: 104,
-              height: 128,
-              width: 128,
-              display: 'flex',
-              borderRadius: '50%',
-              border: '4px solid #fff',
-              zIndex: '5'
-            }}
-          >
-            <img
-              src={pageInfo.authorImage}
-              style={{
-                width: '100%',
-                height: '100%'
-                // transform: 'scale(1.04)'
-              }}
-            />
-          </div>
-        )}
       </div>
     ),
     {
@@ -178,7 +265,7 @@ export async function getNotionPageInfo({
   const recordMap = await notion.getPage(pageId)
 
   const keys = Object.keys(recordMap?.block || {})
-  const block = recordMap?.block?.[keys[0]!]?.value
+  const block = (recordMap?.block?.[keys[0]!] as any)?.value as any
 
   if (!block) {
     throw new Error('Invalid recordMap for page')
@@ -232,9 +319,10 @@ export async function getNotionPageInfo({
   const author =
     getPageProperty<string>('Author', block, recordMap) || libConfig.author
 
-  // const socialDescription =
-  //   getPageProperty<string>('Description', block, recordMap) ||
-  //   libConfig.description
+  const description =
+    getPageProperty<string>('Summary', block, recordMap) ||
+    getPageProperty<string>('Description', block, recordMap) ||
+    libConfig.description
 
   // const lastUpdatedTime = getPageProperty<number>(
   //   'Last Updated',
@@ -259,6 +347,7 @@ export async function getNotionPageInfo({
   const pageInfo: NotionPageInfo = {
     pageId,
     title,
+    description,
     image,
     imageObjectPosition,
     author,

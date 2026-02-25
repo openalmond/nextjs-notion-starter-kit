@@ -19,6 +19,15 @@ export interface PublishedPost {
   author?: string | null
 }
 
+// Keep this aligned with tag-page ISR cadence so first-hit requests can reuse
+// recent crawl results without serving stale data for long.
+const PUBLISHED_POSTS_CACHE_TTL_MS = 60_000
+
+let publishedPostsCache:
+  | { expiresAt: number; posts: PublishedPost[] }
+  | undefined
+let publishedPostsInFlight: Promise<PublishedPost[]> | undefined
+
 const normalizeTags = (value: any): string[] => {
   if (!value) return []
 
@@ -35,7 +44,7 @@ const normalizeTags = (value: any): string[] => {
     .filter(Boolean)
 }
 
-export async function getPublishedPosts(): Promise<PublishedPost[]> {
+async function getPublishedPostsImpl(): Promise<PublishedPost[]> {
   const siteMap = await getSiteMap()
   const posts: PublishedPost[] = []
 
@@ -46,7 +55,7 @@ export async function getPublishedPosts(): Promise<PublishedPost[]> {
       siteMap.pageMap?.[pageId] ?? undefined
     if (!recordMap) continue
 
-    const block = recordMap.block[pageId]?.value
+    const block = (recordMap.block[pageId] as any)?.value as any
     if (!block || block.type !== 'page' || block.parent_table !== 'collection') {
       continue
     }
@@ -104,4 +113,39 @@ export async function getPublishedPosts(): Promise<PublishedPost[]> {
   }
 
   return posts
+}
+
+export async function getPublishedPosts(): Promise<PublishedPost[]> {
+  const now = Date.now()
+
+  if (publishedPostsCache && now < publishedPostsCache.expiresAt) {
+    return publishedPostsCache.posts
+  }
+
+  if (publishedPostsInFlight) {
+    return publishedPostsInFlight
+  }
+
+  publishedPostsInFlight = (async () => {
+    try {
+      const posts = await getPublishedPostsImpl()
+      publishedPostsCache = {
+        posts,
+        expiresAt: Date.now() + PUBLISHED_POSTS_CACHE_TTL_MS
+      }
+      return posts
+    } catch (err: any) {
+      if (publishedPostsCache?.posts?.length) {
+        console.warn('warning getPublishedPosts failed; serving stale cache', {
+          message: err?.message
+        })
+        return publishedPostsCache.posts
+      }
+      throw err
+    } finally {
+      publishedPostsInFlight = undefined
+    }
+  })()
+
+  return publishedPostsInFlight
 }
