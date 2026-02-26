@@ -112,7 +112,7 @@ export function FooterImpl() {
       <footer className={styles.footer}>
         {/* COPYRIGHT */}
         <div className={styles.copyright}>
-          © {currentYear} {config.author}. All Rights Reserved.
+          &copy; {currentYear} {config.author}. All Rights Reserved.
         </div>
 
         {/* DARK MODE TOGGLE */}

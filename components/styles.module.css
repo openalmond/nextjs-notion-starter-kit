@@ -51,24 +51,29 @@
 
 .footerNav {
   width: 100%;
-  background-color: var(--bg-color);
-  border-top: 1px solid var(--fg-color-0);
-  padding: 24px 0;
+  background: var(--bg-color);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--bg-color) 88%, #ffffff 12%) 0%,
+    var(--bg-color) 100%
+  );
+  border-top: 1px solid var(--oa-border);
+  padding: clamp(1.05rem, 2.6vw, 1.7rem) 0;
 }
 
 .footerNavInner {
-  max-width: 600px;
+  max-width: min(860px, 94vw);
   margin: 0 auto;
-  padding: 0 16px;
+  padding: 0 var(--oa-space-4);
 
   display: flex;
   flex-direction: row;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
 
   /* IMPORTANT: keep everything on one horizontal line */
   flex-wrap: nowrap;
-  gap: 3rem;
+  gap: clamp(1rem, 3.8vw, 2.8rem);
 }
 
 /* LOGO */
@@ -78,7 +83,7 @@
 }
 
 .footerNavLogoImage {
-  height: 64px;
+  height: 62px;
   width: auto;
   display: block;
 }
@@ -107,44 +112,79 @@
   display: flex;
   flex-direction: row;
   justify-content: flex-end;
-  gap: 4rem;
+  gap: clamp(1.1rem, 4.2vw, 3.4rem);
   flex: 1 1 auto;
 }
 
 /* remove bullets / extra padding */
 .footerNavColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 0.16rem;
   list-style: none;
   padding: 0;
   margin: 0;
 }
 
+.footerNavColumn li {
+  line-height: 1.2;
+}
+
 /* LINKS WITH BRAND GRADIENT UNDERLINE */
 
 .footerNavLink {
-  font-size: 0.95rem;
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.9rem;
+  border-radius: 0.5rem;
+  font-size: 0.93rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
   color: var(--fg-color);
   text-decoration: none;
   position: relative;
-  padding-bottom: 2px;
+  padding: 0.2rem 0.34rem 0.24rem;
+  opacity: 0.96;
 
   background-image: linear-gradient(90deg, #336699 0%, #99bbee 100%);
   background-size: 0% 0.1rem;
-  background-position: 0 100%;
+  background-position: 0.34rem calc(100% - 0.24rem);
   background-repeat: no-repeat;
-  transition: background-size 300ms ease-out, color 200ms ease-out;
+  transition:
+    background-size 260ms ease-out,
+    color 200ms ease-out,
+    opacity 180ms ease-out,
+    background-color 180ms ease-out;
 }
 
 .footerNavLink:hover,
 .footerNavLink:focus {
-  background-size: 100% 0.1rem;
+  color: var(--oa-accent);
+  opacity: 1;
+  background-size: calc(100% - 0.68rem) 0.1rem;
+  background-color: color-mix(in srgb, var(--oa-surface-2) 62%, transparent);
   text-decoration: none;
+}
+
+.footerNavLink:focus-visible {
+  box-shadow: var(--oa-focus);
+}
+
+:global(.dark-mode) .footerNavLink {
+  color: #dbe7ff;
+}
+
+:global(.dark-mode) .footerNavLink:hover,
+:global(.dark-mode) .footerNavLink:focus {
+  color: #f8fafc;
+  background-color: rgba(30, 41, 59, 0.62);
 }
 
 /* RESPONSIVE: keep row layout, just tighten spacing & font size */
 
 @media only screen and (max-width: 720px) {
   .footerNav {
-    padding: 16px 0;
+    padding: 14px 0;
   }
 
   .footerNavInner {
@@ -159,11 +199,13 @@
 
   /* keep logo and text basically full-size at this breakpoint */
   .footerNavLogoImage {
-    height: 64px;         /* same as desktop */
+    height: 60px;         /* same as desktop */
   }
 
   .footerNavLink {
-    font-size: 0.95rem;   /* same as desktop */
+    min-height: 1.8rem;
+    font-size: 0.9rem;   /* same as desktop */
+    padding: 0.16rem 0.25rem 0.2rem;
   }
 }
 
@@ -173,9 +215,11 @@
 
 .footer {
   width: 100%;
-  max-width: 960px;
+  max-width: min(var(--oa-shell-max), 94vw);
   margin: auto auto 0;
-  padding: 8px;
+  padding: 0.5rem 0.7rem 0.75rem;
+  border-top: 1px solid var(--oa-border);
+  border-top: 1px solid color-mix(in srgb, var(--oa-border) 76%, transparent);
 
   display: flex;
   flex-direction: row;
@@ -184,8 +228,9 @@
 }
 
 .copyright {
-  font-size: 80%;
-  padding: 0.5em;
+  font-size: 0.82rem;
+  opacity: 0.9;
+  padding: 0.45em;
 }
 
 .settings,
@@ -196,11 +241,33 @@
 .settings a,
 .social a {
   cursor: pointer;
-  font-size: 2em;
+  font-size: 1.55rem;
   display: inline-flex;
-  padding: 0.25em;
-  margin-right: 1vw;
-  transition: color 250ms ease-out;
+  align-items: center;
+  justify-content: center;
+  padding: 0.38em;
+  margin-right: 0.35rem;
+  border-radius: 999px;
+  transition:
+    color 180ms ease-out,
+    transform 180ms ease-out,
+    background-color 200ms ease-out;
+}
+
+.settings a {
+  background: rgba(255, 255, 255, 0.54);
+  background: color-mix(in srgb, var(--oa-surface-2) 60%, transparent);
+}
+
+.social a {
+  background: rgba(255, 255, 255, 0.48);
+  background: color-mix(in srgb, var(--oa-surface-2) 56%, transparent);
+}
+
+:global(.dark-mode) .settings a,
+:global(.dark-mode) .social a {
+  background: rgba(15, 23, 42, 0.42);
+  border: 1px solid rgba(148, 163, 184, 0.2);
 }
 
 .settings a:last-of-type,
@@ -210,7 +277,12 @@
 
 .settings a:hover,
 .social a:hover {
-  transition: color 50ms ease-out;
+  transform: translateY(-1px);
+}
+
+.settings a:focus-visible,
+.social a:focus-visible {
+  box-shadow: var(--oa-focus);
 }
 
 .toggleDarkMode:hover {
@@ -303,18 +375,28 @@
   display: flex;
   flex-direction: row;
   justify-content: center;
-  padding: 6px 12px 12px;
+  padding: 8px 12px 14px;
 }
 
 .pageActions a {
   cursor: pointer;
-  font-size: 24px;
+  font-size: 22px;
   display: inline-flex;
-  padding: 12px;
-  margin-right: 1vw;
-  border-radius: 50%;
-  background: transparent;
-  transition: all 250ms ease-out;
+  padding: 10px;
+  margin-right: 0.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--oa-border);
+  border: 1px solid color-mix(in srgb, var(--oa-border) 70%, transparent);
+  background: rgba(255, 255, 255, 0.58);
+  background: color-mix(in srgb, var(--oa-surface-2) 68%, transparent);
+  transition:
+    all 220ms ease-out,
+    transform 170ms ease-out;
+}
+
+:global(.dark-mode) .pageActions a {
+  background: rgba(15, 23, 42, 0.42);
+  border-color: rgba(148, 163, 184, 0.22);
 }
 
 .pageActions a:last-of-type {
@@ -322,7 +404,8 @@
 }
 
 .pageActions a:hover {
-  transition: all 50ms ease-out;
+  transform: translateY(-1px);
+  transition: all 120ms ease-out;
 }
 
 .notionFrame {
@@ -332,11 +415,13 @@
 .likeTweet:hover {
   background: #f6e3e8;
   color: #e0265e;
+  border-color: rgba(224, 38, 94, 0.26);
 }
 
 .retweet:hover {
   color: #19bf64;
   background: #e5f2e8;
+  border-color: rgba(25, 191, 100, 0.26);
 }
 
 @media (max-width: 1360px) {
@@ -376,4 +461,29 @@
 
 .hidden {
   visibility: hidden;
+}
+
+.navLink {
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--fg-color);
+}
+
+.navLink:hover {
+  color: var(--oa-accent);
+}
+
+.navLink:focus-visible {
+  box-shadow: var(--oa-focus);
+}
+
+.navLinkActive {
+  color: var(--oa-accent) !important;
+  border-color: rgba(96, 165, 250, 0.42) !important;
+  background: linear-gradient(
+    90deg,
+    rgba(59, 130, 246, 0.2) 0%,
+    rgba(96, 165, 250, 0.06) 100%
+  ) !important;
 }

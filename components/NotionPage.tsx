@@ -258,23 +258,6 @@ export function NotionPage({
   const safeRecordMap = React.useMemo(() => {
     if (!recordMap?.block) return recordMap
 
-    const requiredBlockIds = new Set<string>()
-    const resolvedPageUuid = parsePageId(pageId, { uuid: true })
-    const resolvedPageCompact = parsePageId(pageId, { uuid: false })
-
-    if (resolvedPageUuid) requiredBlockIds.add(resolvedPageUuid)
-    if (resolvedPageCompact) requiredBlockIds.add(resolvedPageCompact)
-
-    for (const blockRecord of Object.values(recordMap.block)) {
-      const contentIds = (blockRecord as any)?.value?.content as
-        | string[]
-        | undefined
-      if (!contentIds?.length) continue
-      for (const contentId of contentIds) {
-        requiredBlockIds.add(contentId)
-      }
-    }
-
     const safeBlockMap = Object.entries(recordMap.block).reduce(
       (acc, [rawBlockId, blockRecord]) => {
         let normalizedRecord: any = blockRecord
@@ -357,15 +340,13 @@ export function NotionPage({
 
         acc[rawBlockId] = safeBlockRecord
 
-        // Add aliases only when they're actually referenced by content/page IDs.
-        if (dashedId !== rawBlockId && requiredBlockIds.has(dashedId)) {
+        if (dashedId !== rawBlockId) {
           acc[dashedId] = safeBlockRecord
         }
 
         if (
           compactId !== rawBlockId &&
-          compactId !== dashedId &&
-          requiredBlockIds.has(compactId)
+          compactId !== dashedId
         ) {
           acc[compactId] = safeBlockRecord
         }
@@ -470,6 +451,247 @@ export function NotionPage({
   React.useEffect(() => {
     setHasMounted(true)
   }, [])
+
+  React.useEffect(() => {
+    if (!hasMounted || isLiteMode) return
+    if (typeof window === 'undefined') return
+
+    const prefersReducedMotion = window.matchMedia(
+      '(prefers-reduced-motion: reduce)'
+    ).matches
+
+    if (prefersReducedMotion) {
+      document.body.classList.remove('oa-motion')
+      return
+    }
+
+    const container = document.querySelector('.notion-page-content-inner')
+    if (!container) return
+
+    const blocks = Array.from(container.children).filter(
+      (node): node is HTMLElement => node instanceof HTMLElement
+    )
+    if (!blocks.length) return
+
+    document.body.classList.add('oa-motion')
+
+    for (const [index, block] of blocks.entries()) {
+      block.classList.add('oa-reveal')
+      block.style.setProperty('--oa-reveal-delay', `${Math.min(index * 26, 260)}ms`)
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue
+
+          const element = entry.target as HTMLElement
+          element.classList.add('oa-reveal-visible')
+          observer.unobserve(element)
+        }
+      },
+      {
+        root: null,
+        threshold: 0.14,
+        rootMargin: '0px 0px -9% 0px'
+      }
+    )
+
+    for (const block of blocks) {
+      observer.observe(block)
+    }
+
+    return () => {
+      observer.disconnect()
+      for (const block of blocks) {
+        block.classList.remove('oa-reveal', 'oa-reveal-visible')
+        block.style.removeProperty('--oa-reveal-delay')
+      }
+    }
+  }, [hasMounted, isLiteMode, pageId])
+
+  React.useEffect(() => {
+    if (!hasMounted || isLiteMode) return
+    if (typeof window === 'undefined') return
+
+    const title = document.querySelector('.notion-page > .notion-title')
+    if (!(title instanceof HTMLElement)) return
+
+    title.classList.add('oa-content-title')
+    const page = title.closest('.notion-page')
+    let metaObserver: MutationObserver | null = null
+
+    const getTopMetaSource = () => {
+      if (!(page instanceof HTMLElement)) return null
+
+      let sibling = title.nextElementSibling as HTMLElement | null
+      while (sibling) {
+        if (
+          sibling.matches(
+            '.notion-collection-page-properties, .notion-collection-row'
+          )
+        ) {
+          return sibling
+        }
+
+        if (sibling.matches('.notion-page-content, .notion-page-content-inner')) {
+          break
+        }
+
+        sibling = sibling.nextElementSibling as HTMLElement | null
+      }
+
+      return page.querySelector(
+        '.notion-collection-page-properties, .notion-collection-row'
+      ) as HTMLElement | null
+    }
+
+    const collectMetaValues = (metaSource: HTMLElement) => {
+      const propertyRows = Array.from(
+        metaSource.querySelectorAll('.notion-collection-row-property')
+      )
+
+      const values = propertyRows.flatMap((propertyRow) => {
+        const chips = Array.from(
+          propertyRow.querySelectorAll(
+            '.notion-tag-link, .notion-property-select-item, .notion-property-multi_select-item, .notion-property-status-item'
+          )
+        )
+          .map((node) => node.textContent?.trim() || '')
+          .filter(Boolean)
+        if (chips.length) return chips
+
+        const prioritized =
+          propertyRow.querySelector(
+            '.notion-property-date, .notion-property-created_time, .notion-property-last_edited_time, .notion-author-inline'
+          ) ||
+          propertyRow.querySelector('.notion-collection-row-value')
+
+        const text = prioritized?.textContent?.replaceAll(/\s+/g, ' ').trim()
+        return text ? [text] : []
+      })
+
+      return [...new Set(values)]
+        .map((value) => value.replaceAll(/\s+/g, ' ').trim())
+        .filter(
+          (value) =>
+            !!value &&
+            value.length <= 52 &&
+            !/^tags?$/i.test(value) &&
+            !/^author$/i.test(value)
+        )
+        .slice(0, 8)
+    }
+
+    const renderMetaRail = () => {
+      const existingMetaRail = title.querySelector(
+        ':scope > .oa-content-title-meta'
+      )
+      if (existingMetaRail instanceof HTMLElement) existingMetaRail.remove()
+
+      const metaSource = getTopMetaSource()
+      if (!metaSource) return false
+
+      const metaValues = collectMetaValues(metaSource)
+      if (!metaValues.length) return false
+
+      let textWrapper = title.querySelector(
+        ':scope > .oa-content-title-text'
+      ) as HTMLElement | null
+
+      if (!textWrapper) {
+        textWrapper = document.createElement('span')
+        textWrapper.className = 'oa-content-title-text'
+        while (title.firstChild) {
+          textWrapper.append(title.firstChild)
+        }
+        title.append(textWrapper)
+      }
+
+      const metaRail = document.createElement('span')
+      metaRail.className = 'oa-content-title-meta'
+      for (const value of metaValues) {
+        const chip = document.createElement('span')
+        chip.className = 'oa-content-title-meta-item'
+        chip.textContent = value
+        metaRail.append(chip)
+      }
+      title.append(metaRail)
+      return true
+    }
+
+    if (!renderMetaRail() && page instanceof HTMLElement) {
+      metaObserver = new MutationObserver(() => {
+        if (!renderMetaRail()) return
+        metaObserver?.disconnect()
+        metaObserver = null
+      })
+
+      metaObserver.observe(page, {
+        childList: true,
+        subtree: true
+      })
+    }
+
+    const sentinel = document.createElement('div')
+    sentinel.className = 'oa-title-sentinel'
+    title.parentElement?.insertBefore(sentinel, title)
+
+    const getHeaderOffset = () => {
+      const header = document.querySelector('.notion-header')
+      if (!(header instanceof HTMLElement)) return 66
+      return Math.max(48, header.offsetHeight + 6)
+    }
+
+    let observer: IntersectionObserver | null = null
+    const observe = () => {
+      if (observer) observer.disconnect()
+
+      observer = new IntersectionObserver(
+        (entries) => {
+          const isIntersecting = entries[0]?.isIntersecting
+          document.body.classList.toggle('oa-title-stuck', !isIntersecting)
+        },
+        {
+          root: null,
+          threshold: 0,
+          rootMargin: `-${getHeaderOffset()}px 0px 0px 0px`
+        }
+      )
+
+      observer.observe(sentinel)
+    }
+
+    observe()
+
+    const onResize = () => observe()
+    window.addEventListener('resize', onResize)
+
+    return () => {
+      observer?.disconnect()
+      metaObserver?.disconnect()
+      window.removeEventListener('resize', onResize)
+      document.body.classList.remove('oa-title-stuck')
+
+      const textWrapper = title.querySelector(
+        ':scope > .oa-content-title-text'
+      ) as HTMLElement | null
+      if (textWrapper) {
+        while (textWrapper.firstChild) {
+          title.insertBefore(textWrapper.firstChild, textWrapper)
+        }
+        textWrapper.remove()
+      }
+
+      const metaRail = title.querySelector(
+        ':scope > .oa-content-title-meta'
+      ) as HTMLElement | null
+      metaRail?.remove()
+
+      title.classList.remove('oa-content-title')
+      sentinel.remove()
+    }
+  }, [hasMounted, isLiteMode, pageId])
 
   const resolvedDarkMode = hasMounted ? isDarkMode : false
 

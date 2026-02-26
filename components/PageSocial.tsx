@@ -1,5 +1,6 @@
 import type * as React from 'react'
 import cs from 'classnames'
+import { FaDiscord } from 'react-icons/fa6'
 
 import * as config from '@/lib/config'
 
@@ -39,11 +40,7 @@ const socialLinks: SocialLink[] = [
     name: 'discord',
     href: config.discord,
     title: 'Discord',
-    icon: (
-      <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'>
-        <path d='M20 4.5A18 18 0 0 0 15.9 3l-.4.8A16.1 16.1 0 0 1 12 3.7a16.1 16.1 0 0 1-3.5.1L8.1 3A18 18 0 0 0 4 4.5 14.5 14.5 0 0 0 2 16.7 18.3 18.3 0 0 0 8 20l.6-.8A10.6 10.6 0 0 1 7 18.7l.4-.2a7.7 7.7 0 0 0 9.2 0l.4.2-1.6.5.6.8a18.3 18.3 0 0 0 6-3.3A14.5 14.5 0 0 0 20 4.5ZM9.7 15.3c-.9 0-1.6-.8-1.6-1.8s.7-1.8 1.6-1.8 1.6.8 1.6 1.8-.7 1.8-1.6 1.8Zm4.6 0c-.9 0-1.6-.8-1.6-1.8s.7-1.8 1.6-1.8 1.6.8 1.6 1.8-.7 1.8-1.6 1.8Z' />
-      </svg>
-    )
+    icon: <FaDiscord />
   },
 
   config.facebook && {

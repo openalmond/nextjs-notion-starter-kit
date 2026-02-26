@@ -1,6 +1,7 @@
 import Head from 'next/head'
 import { useRouter } from 'next/router'
 import Script from 'next/script'
+import * as React from 'react'
 
 import type * as types from '@/lib/types'
 import * as config from '@/lib/config'
@@ -39,6 +40,48 @@ export function PageHead({
 
   const socialImageUrl = getSocialImageUrl(pageId) || image
   const normalizedKeywords = keywords?.filter(Boolean) || []
+  const canonicalPath = React.useMemo(() => {
+    try {
+      return new URL(canonicalUrl).pathname || '/'
+    } catch {
+      return path || '/'
+    }
+  }, [canonicalUrl, path])
+
+  const breadcrumbs = React.useMemo(() => {
+    const segments = canonicalPath.split('/').filter(Boolean)
+    const items: Array<{ '@type': 'ListItem'; position: number; name: string; item: string }> =
+      [
+        {
+          '@type': 'ListItem',
+          position: 1,
+          name: 'Home',
+          item: siteOrigin
+        }
+      ]
+
+    let accumulatedPath = ''
+    for (const [index, segment] of segments.entries()) {
+      accumulatedPath += `/${segment}`
+      const normalizedSegment =
+        index === segments.length - 1 && title
+          ? title
+          : decodeURIComponent(segment)
+              .replaceAll('-', ' ')
+              .replaceAll(/\s+/g, ' ')
+              .trim()
+
+      items.push({
+        '@type': 'ListItem',
+        position: index + 2,
+        name: normalizedSegment || segment,
+        item: `${siteOrigin}${accumulatedPath}`
+      })
+    }
+
+    return items
+  }, [canonicalPath, siteOrigin, title])
+
   const socialProfiles = [
     config.twitter ? `https://x.com/${config.twitter}` : null,
     config.linkedin ? `https://www.linkedin.com/company/${config.linkedin}` : null,
@@ -68,6 +111,29 @@ export function PageHead({
       '@type': 'Organization',
       name: config.name
     }
+  })
+
+  const webPageJsonLd = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': isBlogPost ? 'Article' : 'WebPage',
+    name: title,
+    headline: title,
+    description,
+    url: canonicalUrl,
+    inLanguage: config.language,
+    isPartOf: {
+      '@type': 'WebSite',
+      name: config.name,
+      url: siteOrigin
+    },
+    primaryImageOfPage: socialImageUrl || undefined,
+    keywords: normalizedKeywords.length ? normalizedKeywords.join(', ') : undefined
+  })
+
+  const breadcrumbJsonLd = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: breadcrumbs
   })
 
   const blogPostingJsonLd =
@@ -211,6 +277,14 @@ export function PageHead({
       <Script id='website-jsonld' type='application/ld+json' strategy='beforeInteractive'>
         {websiteJsonLd}
       </Script>
+      <Script id='webpage-jsonld' type='application/ld+json' strategy='beforeInteractive'>
+        {webPageJsonLd}
+      </Script>
+      {breadcrumbs.length > 1 && (
+        <Script id='breadcrumb-jsonld' type='application/ld+json' strategy='beforeInteractive'>
+          {breadcrumbJsonLd}
+        </Script>
+      )}
 
       {/* Better SEO for the blog posts */}
       {blogPostingJsonLd && (

@@ -3,6 +3,7 @@ import { parsePageId } from 'notion-utils'
 
 import type { PageProps } from './types'
 import * as acl from './acl'
+import { compactRecordMapForClient } from './compact-record-map'
 import { environment, pageUrlAdditions, pageUrlOverrides, site } from './config'
 import { db } from './db'
 import { getSiteMap } from './get-site-map'
@@ -88,6 +89,14 @@ export async function resolveNotionPage(
     recordMap = await getPage(pageId)
   }
 
-  const props: PageProps = { site, recordMap, pageId }
+  // Safety default: keep full recordMap to avoid regressions with Notion assets
+  // (custom emoji, images, collection view internals). Enable only in canaries.
+  const shouldCompactRecordMap =
+    process.env.NOTION_COMPACT_RECORD_MAP === 'true'
+  const compactedRecordMap = shouldCompactRecordMap
+    ? compactRecordMapForClient(recordMap, pageId)
+    : recordMap
+
+  const props: PageProps = { site, recordMap: compactedRecordMap, pageId }
   return { ...props, ...(await acl.pageAcl(props)) }
 }

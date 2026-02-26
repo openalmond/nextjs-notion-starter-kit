@@ -40,9 +40,7 @@ export default withBundleAnalyzer({
       "media-src 'self' data: blob: https:"
     ]
 
-    const cspEnforced = [...cspBaseDirectives, ...cspCompatDirectives].join('; ')
-
-    const cspReportOnly = [
+    const cspStrictDirectives = [
       ...cspBaseDirectives,
       // Candidate stricter script/connect policy for a future phase:
       // remove unsafe-eval and restrict connect-src to known endpoints.
@@ -66,9 +64,20 @@ export default withBundleAnalyzer({
       "frame-src 'self' https:",
       "worker-src 'self' blob:",
       "media-src 'self' data: blob: https:",
-      "default-src 'self'",
-      `report-uri ${cspReportEndpoint}`
-    ].join('; ')
+      "default-src 'self'"
+    ]
+
+    const cspCompat = [...cspBaseDirectives, ...cspCompatDirectives].join('; ')
+    const cspStrict = cspStrictDirectives.join('; ')
+    const cspReportOnly = `${cspStrict}; report-uri ${cspReportEndpoint}`
+
+    // CSP_MODE:
+    // - compat (default): enforce compatibility CSP + report stricter policy
+    // - report-only: do not enforce CSP, report stricter policy only
+    // - strict: enforce stricter policy + report stricter policy
+    // eslint-disable-next-line no-process-env
+    const cspMode = (process.env.CSP_MODE || 'compat').toLowerCase()
+    const cspEnforced = cspMode === 'strict' ? cspStrict : cspCompat
 
     const baseHeaders = [
       {
@@ -84,14 +93,17 @@ export default withBundleAnalyzer({
         value: 'camera=(), microphone=(), geolocation=()'
       },
       {
-        key: 'Content-Security-Policy',
-        value: cspEnforced
-      },
-      {
         key: 'Content-Security-Policy-Report-Only',
         value: cspReportOnly
       }
     ]
+
+    if (cspMode !== 'report-only') {
+      baseHeaders.splice(3, 0, {
+        key: 'Content-Security-Policy',
+        value: cspEnforced
+      })
+    }
 
     // HSTS should only be set on HTTPS production deployments.
     // eslint-disable-next-line no-process-env

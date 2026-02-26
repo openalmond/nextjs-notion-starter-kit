@@ -9,6 +9,8 @@ All notable changes to this project are documented in this file.
 - `collectionRowHydrationLimit` config flag for phased collection-row hydration caps (default: `null`, disabled).
 - GitHub-facing project docs: `LICENSE.md`, `PRIVACY.md`, `SECURITY.md`.
 - `Content-Security-Policy-Report-Only` header and `/api/csp-report` endpoint for non-breaking CSP telemetry.
+- `scripts/smoke-check.mjs` plus `npm run test:smoke` for lightweight production-route regression checks.
+- `lib/compact-record-map.ts` to compact Notion `recordMap` payloads before sending page props.
 
 ### Changed
 
@@ -31,6 +33,10 @@ All notable changes to this project are documented in this file.
 - Enhanced sitemap output with deduped URLs, XML escaping, and per-page `lastmod` / `priority`.
 - Refreshed web app and iOS icon assets with dark backgrounds and increased safe padding for Android maskable icons.
 - Switched JSON-LD scripts to server-visible `beforeInteractive` output so structured data is present in initial HTML.
+- Phase 1 UI/UX refresh: introduced design tokens, refined typography/spacing rhythm, and modernized Notion cards/header/footer interaction styling.
+- Added `WebPage/Article` + `BreadcrumbList` JSON-LD metadata for stronger crawl context and rich-result compatibility.
+- Added staged CSP mode selection via `CSP_MODE` (`compat`, `report-only`, `strict`) while preserving current default behavior.
+- Reduced large page-data pressure by compacting/deduping Notion `recordMap` aliases and trimming deep collection-row block trees in page props.
 
 ## [2026-02-25]
 

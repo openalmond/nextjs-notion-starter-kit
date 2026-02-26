@@ -49,6 +49,20 @@ This project requires a recent version of Node.js (we recommend >= 16).
 5. `npm run deploy` to deploy to vercel 💪
 6. Double check your [Vercel project settings](#vercel-configuration)
 
+### Smoke Checks
+
+Run lightweight regression checks against a running instance:
+
+```bash
+npm run test:smoke
+```
+
+To target production directly:
+
+```bash
+SMOKE_BASE_URL=https://www.openalmond.com npm run test:smoke
+```
+
 I tried to make configuration as easy as possible — All you really need to do to get started is edit `rootNotionPageId`.
 
 We recommend duplicating the [default page](https://notion.so/7875426197cf461698809def95960ebf) as a starting point, but you can use any public notion page you want.
@@ -183,6 +197,12 @@ To enable, just add a `NEXT_PUBLIC_POSTHOG_ID` environment variable, which will 
 ## Environment Variables
 
 If you're using Redis, analytics, or any other feature which requires environment variables, then you'll need to [add them to your Vercel project](https://vercel.com/docs/concepts/projects/environment-variables).
+
+`CSP_MODE` controls CSP rollout behavior:
+
+- `compat` (default): enforce compatibility CSP + report strict CSP violations.
+- `report-only`: report strict CSP violations only.
+- `strict`: enforce strict CSP and report violations.
 
 If you want to test your redis builds with GitHub Actions, then you'll need to edit the [default build action](./.github/workflows/build.yml) to add `REDIS_HOST` and `REDIS_PASSWORD`. Here is an [example from my personal branch](https://github.com/transitive-bullshit/nextjs-notion-starter-kit/blob/transitive-bullshit/.github/workflows/build.yml#L17-L21). You'll also need to add these environment variables to your GitHub repo as [repository secrets](https://docs.github.com/en/actions/security-guides/encrypted-secrets).
 

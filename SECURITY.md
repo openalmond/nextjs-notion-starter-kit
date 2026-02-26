@@ -32,8 +32,11 @@ Security reports are accepted for:
 
 ## CSP Rollout
 
-The site currently runs a `Content-Security-Policy-Report-Only` header to
-collect compatibility data before enforcement.
+The site supports staged CSP rollout modes via `CSP_MODE`:
 
-- Violation reports are sent to `/api/csp-report`
-- Reports are logged server-side for review during phased hardening
+- `compat` (default): enforce compatibility CSP + report stricter CSP violations.
+- `report-only`: disable enforced CSP and keep strict CSP in report-only mode.
+- `strict`: enforce strict CSP and keep strict policy reporting enabled.
+
+Violation reports are sent to `/api/csp-report` and logged server-side during
+phased hardening.
