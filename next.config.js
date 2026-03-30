@@ -26,6 +26,7 @@ export default withBundleAnalyzer({
       // Keep compatibility with Next.js + existing inline script usage.
       [
         "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+        'https://pagead2.googlesyndication.com',
         'https://app.posthog.com',
         'https://cdn.usefathom.com',
         'https://va.vercel-scripts.com',
@@ -46,6 +47,7 @@ export default withBundleAnalyzer({
       // remove unsafe-eval and restrict connect-src to known endpoints.
       [
         "script-src 'self' 'unsafe-inline'",
+        'https://pagead2.googlesyndication.com',
         'https://app.posthog.com',
         'https://cdn.usefathom.com',
         'https://va.vercel-scripts.com',
